@@ -6,10 +6,13 @@ from thingpark.utils import get_datalogger, decode_json_body
 from thingpark.tasks import process_data
 from broker.utils import send_message
 
+
 class ThingparkEndpoint(EndpointProvider):
     description = 'Receive HTTP POST requests from Actility Thingpark system'
 
     def handle_request(self, request):
+        if request.method != 'POST':
+            return HttpResponse('Only POST with JSON body is allowed', status=405)
         serialised_request = serialize_django_request(request)
         devid = request.GET.get('LrnDevEui', 'unknown')
         serialised_request['devid'] = devid
