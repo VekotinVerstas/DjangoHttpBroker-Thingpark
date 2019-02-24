@@ -2,7 +2,7 @@ import base64
 import json
 from django.contrib.auth import authenticate
 from django.utils import timezone
-from .models import Datalogger
+# from .models import Datalogger
 
 
 def basicauth(request):
@@ -26,7 +26,7 @@ def get_datalogger(devid, name='', update_activity=False):
     # import django
     # django.setup()
     # from broker.models import Datalogger
-    # from .models import Datalogger
+    from .models import Datalogger
 
     datalogger, created = Datalogger.objects.get_or_create(devid=devid)
     changed = False
