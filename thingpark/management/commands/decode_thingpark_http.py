@@ -49,12 +49,7 @@ def consumer_callback(channel, method, properties, body):
     if 'DevEUI_uplink' in data:
         parse_thingpark_request(serialised_request, data)
     print(data)
-    # print('Got a message:', data_unpack(body))
-    time.sleep(2)
-    print('Acked')
-    time.sleep(2)
     channel.basic_ack(method.delivery_tag)
-    print('end')
 
 
 class Command(RabbitCommand):
