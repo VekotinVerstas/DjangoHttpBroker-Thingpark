@@ -1,8 +1,38 @@
 import base64
 import json
+import datetime
+import influxdb
+import pytz
 from django.contrib.auth import authenticate
 from django.utils import timezone
-# from .models import Datalogger
+from django.utils.timezone import get_default_timezone
+
+
+def get_influxdb_client(host='127.0.0.1', port=8086, database='mydb'):
+    iclient = influxdb.InfluxDBClient(host=host, port=port, database=database)
+    return iclient
+
+
+def create_influxdb_obj(dev_id, measurement, fields, timestamp=None, extratags=None):
+    # Make sure timestamp is timezone aware and in UTC time
+    if timestamp is None:
+        timestamp = pytz.UTC.localize(datetime.datetime.utcnow())
+    elif timestamp.tzinfo is None or timestamp.tzinfo.utcoffset(timestamp) is None:
+        timestamp = get_default_timezone().localize(timestamp)
+    timestamp = timestamp.astimezone(pytz.UTC)
+    for k, v in fields.items():
+        fields[k] = float(v)
+    measurement = {
+        "measurement": measurement,
+        "tags": {
+            "dev-id": dev_id,
+        },
+        "time": timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),  # is in UTC time
+        "fields": fields
+    }
+    if extratags is not None:
+        measurement['tags'].update(extratags)
+    return measurement
 
 
 def basicauth(request):

@@ -1,14 +1,12 @@
-import time
 import pytz
 import json
 from dateutil.parser import parse
 from django.conf import settings
 from influxdb.exceptions import InfluxDBClientError
-
 from broker.utils import data_unpack
 from broker.management.commands import RabbitCommand
 from broker.providers.decoder import DecoderProvider
-from thingpark.decoders._fvh import create_influxdb_obj, get_influxdb_client
+from thingpark.utils import create_influxdb_obj, get_influxdb_client
 from thingpark.utils import decode_json_body, get_datalogger
 
 

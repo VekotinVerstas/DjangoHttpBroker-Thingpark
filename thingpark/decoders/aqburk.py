@@ -1,5 +1,5 @@
 from broker.providers.decoder import DecoderProvider
-from ._fvh import parse_aqburk
+from thingpark.parsers import parse_aqburk
 
 
 class AQBurkDecoder(DecoderProvider):
