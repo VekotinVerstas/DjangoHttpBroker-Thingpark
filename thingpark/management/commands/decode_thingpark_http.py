@@ -59,7 +59,8 @@ class Command(RabbitCommand):
         pass
 
     def handle(self, *args, **options):
+        options['exchange'] = settings.RAW_HTTP_EXCHANGE
         options['routing_key'] = f'{settings.RABBITMQ["ROUTING_KEY_PREFIX"]}.thingpark.#'
-        options['queue_name'] = 'decode_thingpark_http_queue'
+        options['queue'] = 'decode_thingpark_http_queue'
         options['consumer_callback'] = consumer_callback
         super().handle(*args, **options)
