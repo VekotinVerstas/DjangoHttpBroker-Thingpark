@@ -13,7 +13,7 @@ def get_influxdb_client(host='127.0.0.1', port=8086, database='mydb'):
     return iclient
 
 
-def create_influxdb_obj(dev_id, measurement, fields, timestamp=None, extratags=None):
+def create_influxdb_obj(devid, measurement, fields, timestamp=None, extratags=None):
     # Make sure timestamp is timezone aware and in UTC time
     if timestamp is None:
         timestamp = pytz.UTC.localize(datetime.datetime.utcnow())
@@ -25,7 +25,7 @@ def create_influxdb_obj(dev_id, measurement, fields, timestamp=None, extratags=N
     measurement = {
         "measurement": measurement,
         "tags": {
-            "dev-id": dev_id,
+            "dev-id": devid,
         },
         "time": timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),  # is in UTC time
         "fields": fields
