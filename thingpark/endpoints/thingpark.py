@@ -4,7 +4,7 @@ from django.http.response import HttpResponse
 from broker.providers.endpoint import EndpointProvider
 from broker.utils import serialize_django_request, data_pack
 from thingpark.utils import get_datalogger, decode_json_body
-from thingpark.tasks import process_data
+# from thingpark.tasks import process_data
 from broker.utils import send_message
 
 
@@ -18,11 +18,11 @@ class ThingparkEndpoint(EndpointProvider):
         devid = request.GET.get('LrnDevEui', 'unknown')
         serialised_request['devid'] = devid
         serialised_request['time'] = datetime.datetime.utcnow().isoformat() + 'Z'
-        packed_request = data_pack(serialised_request)
+        message = data_pack(serialised_request)
         pre = settings.RABBITMQ['ROUTING_KEY_PREFIX']
         KEY_PREFIX = f'{pre}.thingpark'
         key = f'{KEY_PREFIX}.{devid}'
-        send_message(packed_request, key)
+        send_message(settings.RAW_HTTP_EXCHANGE, key, message)
         ok, body = decode_json_body(serialised_request['request.body'])
         if ok is False:
             return HttpResponse(f'JSON ERROR: {body}', status=400, content_type='text/plain')
