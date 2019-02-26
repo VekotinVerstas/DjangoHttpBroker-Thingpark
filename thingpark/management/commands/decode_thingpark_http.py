@@ -1,9 +1,9 @@
 import pytz
-import json
 from dateutil.parser import parse
-from django.conf import settings
 from influxdb.exceptions import InfluxDBClientError
-from broker.utils import data_unpack
+from django.conf import settings
+from broker.utils import data_pack, data_unpack
+from broker.utils import send_message
 from broker.management.commands import RabbitCommand
 from broker.providers.decoder import DecoderProvider
 from thingpark.utils import create_influxdb_obj, get_influxdb_client
@@ -18,7 +18,7 @@ def parse_thingpark_request(serialised_request, data):
     timestamp = timestamp.astimezone(pytz.UTC)
     payload_hex = d['payload_hex']
     rssi = d['LrrRSSI']
-
+    idata = {}
     plugins = DecoderProvider.get_plugins({})
     for plugin in plugins:
         decoder_name = f'{plugin.app}.{plugin.name}'
@@ -27,6 +27,21 @@ def parse_thingpark_request(serialised_request, data):
             break
 
     idata['rssi'] = rssi
+
+    # RabbitMQ part
+    pre = settings.RABBITMQ['ROUTING_KEY_PREFIX']
+    KEY_PREFIX = f'{pre}.thingpark'
+    key = f'{KEY_PREFIX}.{devid}'
+    message = {
+        'time': timestamp.isoformat() + 'Z',
+        'devid': devid,
+        'data': idata,
+    }
+    packed_message = data_pack(message)
+
+    print(settings.PARSED_DATA_EXCHANGE, key, packed_message)
+    send_message(settings.PARSED_DATA_EXCHANGE, key, packed_message)
+
     keys_str = 'aqburk'
     measurement = create_influxdb_obj(devid, keys_str, idata, timestamp)
     measurements = [measurement]
