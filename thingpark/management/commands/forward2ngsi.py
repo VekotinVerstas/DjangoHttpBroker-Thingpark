@@ -97,7 +97,10 @@ def send_to_ngsi(data, options=None):
 def consumer_callback(channel, method, properties, body, options=None):
     data = data_unpack(body)
     res = send_to_ngsi(data, options=options)
-    print(res, res.text)
+    if res:
+        print(res, res.text)
+    else:
+        print('No Forwards found!')
     # res.status_code should be 201 or 204
     channel.basic_ack(method.delivery_tag)
 
