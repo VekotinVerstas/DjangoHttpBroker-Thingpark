@@ -74,6 +74,7 @@ def send_to_ngsi(data, options=None):
     forwards = datalogger.forwards.filter(handler='thingpark.AQBurk2NGSIForward')
     if forwards.count() == 0:
         return False
+    # NOTE: this Forward is not currently used, url, user and password are taken from local_settings.py
     f: Forward = forwards[0]
     assert isinstance(NGSI_DATA, dict)
     NGSI_DATA['id'] = devid
