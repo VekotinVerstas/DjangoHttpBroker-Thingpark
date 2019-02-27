@@ -56,7 +56,7 @@ def parse_thingpark_request(serialised_request, data):
         return False
 
 
-def consumer_callback(channel, method, properties, body):
+def consumer_callback(channel, method, properties, body, options=None):
     serialised_request = data_unpack(body)
     ok, data = decode_json_body(serialised_request['request.body'])
     if 'DevEUI_uplink' in data:
