@@ -16,7 +16,7 @@ class Datalogger(models.Model):
     forwards = models.ManyToManyField(Forward,
                                       blank=True,
                                       through="DataloggerForward",
-                                      related_name="related_dataloggers",
+                                      related_name="thingpark_dataloggers",
                                       verbose_name="Data to forward")
     lat = models.FloatField(blank=True, null=True)
     lon = models.FloatField(blank=True, null=True)
@@ -33,7 +33,7 @@ class Datalogger(models.Model):
 
 class DataloggerForward(models.Model):
     datalogger = models.ForeignKey(Datalogger, on_delete=models.CASCADE)
-    forward = models.ForeignKey(Forward, on_delete=models.CASCADE, related_name='related_forwards')
+    forward = models.ForeignKey(Forward, on_delete=models.CASCADE, related_name='thingpark_forwards')
     config = models.TextField(default='{}', help_text='All required configuration parameters in JSON format')
 
     def __str__(self):
