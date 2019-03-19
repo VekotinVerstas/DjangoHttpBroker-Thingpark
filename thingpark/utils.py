@@ -52,11 +52,10 @@ def basicauth(request):
 def get_datalogger(devid, name='', update_activity=False):
     # FIXME: Shit, this import can't be in the beginning of the file or we'll get:
     # "django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet."
-    # It can be imported if you run django.setup() before import, but it messes up loading  
+    # It can be imported if you run django.setup() before import, but it messes up loading
     # import django
     # django.setup()
-    # from broker.models import Datalogger
-    from .models import Datalogger
+    from broker.models import Datalogger
 
     datalogger, created = Datalogger.objects.get_or_create(devid=devid)
     changed = False
