@@ -1,11 +1,13 @@
 import datetime
+
 from django.conf import settings
 from django.http.response import HttpResponse
+
 from broker.providers.endpoint import EndpointProvider
-from broker.utils import serialize_django_request, data_pack
-from thingpark.utils import get_datalogger, decode_json_body
-# from thingpark.tasks import process_data
-from broker.utils import send_message
+from broker.utils import (
+    decode_json_body, get_datalogger, create_routing_key,
+    serialize_django_request, data_pack, send_message
+)
 
 
 class ThingparkEndpoint(EndpointProvider):
@@ -19,9 +21,7 @@ class ThingparkEndpoint(EndpointProvider):
         serialised_request['devid'] = devid
         serialised_request['time'] = datetime.datetime.utcnow().isoformat() + 'Z'
         message = data_pack(serialised_request)
-        pre = settings.RABBITMQ['ROUTING_KEY_PREFIX']
-        KEY_PREFIX = f'{pre}.thingpark'
-        key = f'{KEY_PREFIX}.{devid}'
+        key = create_routing_key('thingpark', devid)
         send_message(settings.RAW_HTTP_EXCHANGE, key, message)
         ok, body = decode_json_body(serialised_request['request.body'])
         if ok is False:
