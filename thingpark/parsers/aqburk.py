@@ -16,10 +16,11 @@ def hex2value10(hex_str):
     return hex2int(hex_str) / 10.0
 
 
-def parse_aqburk(hex_str):
+def parse_aqburk(hex_str, port):
     """
     Parse payload like "2a2a0021002c002800300056003b0000" float values
     :param hex_str: AQLoRaBurk hex payload
+    :param port: LoRaWAN port
     :return: dict containing float values
     """
     data = {
