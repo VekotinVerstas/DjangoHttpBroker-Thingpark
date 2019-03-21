@@ -38,6 +38,13 @@ Vantaa Rekola	106423
 Vantaa Rekola etelä	105417	
 Vantaa Tikkurila Neilikkatie	100763	
 Vantaa Tikkurila Talvikkitie	106951	
+
+Example request for weather observations:
+
+http://opendata.fmi.fi/wfs?request=GetFeature&storedquery_id=fmi::observations::weather::multipointcoverage&fmisid=100971&timestep=10
+http://opendata.fmi.fi/wfs?request=GetFeature&storedquery_id=fmi::observations::weather::multipointcoverage&geoid=-16000150&timestep=10
+
+
 """
 
 
@@ -54,25 +61,30 @@ def get_args():
                         default='urban::observations::airquality::hourly::multipointcoverage')
     parser.add_argument('--stationids', required=True, nargs='+', default=[],
                         help='FMISID, see possible values from https://ilmatieteenlaitos.fi/havaintoasemat ')
+    parser.add_argument('-i', '--idfield', required=True, default='geoid', choices=['geoid', 'fmisid'],
+                        help='Id parameter name')
     parser.add_argument('--extraparams', nargs='+', default=[],
                         help='Additional parameters to output json in "key1=val1 [key2=val2 key3=val3 ...]" format')
     args = parser.parse_args()
+    print(args)
     return args
 
 
-def get_fmi_api_url(geoid, storedquery, starttime, endtime):
+def get_fmi_api_url(geoid, storedquery, starttime, endtime, args):
     s_str = starttime.strftime(time_fmt)
     e_str = endtime.strftime(time_fmt)
+    idfield = args.idfield
     url = f'https://opendata.fmi.fi/wfs?' \
         f'request=getFeature&storedquery_id={storedquery}&' \
-        f'geoId=-{geoid}&startTime={s_str}&endTime={e_str}'
+        f'{idfield}={geoid}&startTime={s_str}&endTime={e_str}'
+    print(url)
     return url
 
 
-def get_data_from_fmi_fi(geoid, storedquery, starttime, endtime):
+def get_data_from_fmi_fi(geoid, storedquery, starttime, endtime, args):
     s_str = starttime.strftime(time_fmt)
     e_str = endtime.strftime(time_fmt)
-    url = get_fmi_api_url(geoid, storedquery, starttime, endtime)
+    url = get_fmi_api_url(geoid, storedquery, starttime, endtime, args)
     fname = 'fmi_{}_{}-{}.xml'.format(geoid, s_str.replace(':', ''), e_str.replace(':', ''))
     if os.path.isfile(fname):
         pass
@@ -91,7 +103,7 @@ def fmi_xml_to_dict(fname):
 
 
 def get_fmi_data(geoid, storedquery, starttime, endtime, args):
-    fmi_xml = get_data_from_fmi_fi(geoid, storedquery, starttime, endtime)
+    fmi_xml = get_data_from_fmi_fi(geoid, storedquery, starttime, endtime, args)
     d = fmi_xml_to_dict(fmi_xml)
     # Base element for all interesting data
     try:
