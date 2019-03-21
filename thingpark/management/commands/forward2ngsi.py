@@ -77,6 +77,9 @@ def send_to_ngsi(data, options=None):
     # NOTE: this Forward is not currently used, url, user and password are taken from local_settings.py
     f: Forward = forwards[0]
     assert isinstance(NGSI_DATA, dict)
+    # print(values)
+    if 'pm25avg' not in values:
+        return False
     NGSI_DATA['id'] = devid
     NGSI_DATA['PM2.5'] = values['pm25avg']
     NGSI_DATA['PM10'] = values['pm10avg']
@@ -84,10 +87,17 @@ def send_to_ngsi(data, options=None):
     NGSI_DATA['dateObserved'] = timestr
     if datalogger.lon and datalogger.lat:
         NGSI_DATA['location']['coordinates'] = [datalogger.lon, datalogger.lat]
+    else:
+        return False
     if datalogger.country and datalogger.locality and datalogger.street:
         NGSI_DATA['address']['addressCountry'] = datalogger.country
         NGSI_DATA['address']['addressLocality'] = datalogger.locality
         NGSI_DATA['address']['streetAddress'] = datalogger.street
+    else:
+        NGSI_DATA['address']['addressCountry'] = ''
+        NGSI_DATA['address']['addressLocality'] = ''
+        NGSI_DATA['address']['streetAddress'] = ''
+
     # ngsi_json = json.dumps(NGSI_DATA)
     print(json.dumps(NGSI_DATA, indent=1))
     res = push_ngsi_orion(NGSI_DATA, ORION_URL_ROOT, ORION_USERNAME, ORION_PASSWORD)
