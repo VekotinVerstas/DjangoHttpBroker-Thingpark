@@ -5,10 +5,11 @@ https://github.com/cyberman54/ESP32-Paxcounter/blob/master/src/TTN/plain_decoder
 
 
 def parse_paxcounter(payload_hex, port):
-    data = {}
-    if port == 1:
+    if port == '1':
         data = {
             'wifi': int(payload_hex[0:4], 16),
             'ble': int(payload_hex[4:8], 16)
         }
+    else:
+        raise ValueError(f'Unknown port "{port}"')
     return data
