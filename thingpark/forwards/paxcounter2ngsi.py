@@ -1,8 +1,13 @@
-import requests
 import json
+import logging
+
+import requests
+
 from broker.providers.forward import ForwardProvider
 
-n = {
+logger = logging.getLogger('runforwards')
+
+ngsi_template = {
     "id": "000773207E3FFFFF",
     "type": "PaxcounterObserved",
     "dateObserved": "2019-03-19T04:52:52.652000+00:00Z",
@@ -31,7 +36,7 @@ class Paxcounter2NGSIForward(ForwardProvider):
 
     def forward_data(self, datalogger, data, config):
         # Copy template
-        m = n.copy()
+        m = ngsi_template.copy()
         # Replace data with real values
         m['id'] = datalogger.devid
         m['dateObserved'] = data['time']
@@ -46,9 +51,13 @@ class Paxcounter2NGSIForward(ForwardProvider):
             "addressLocality": datalogger.locality,
             "streetAddress": datalogger.street
         }
+        logger.debug(json.dumps(m, indent=2))
         # POST data to an endpoint, which is defined in Forward's or DataloggerForward's config field
         # TODO: add authentication and other
         res = requests.post(config['url'], json=m)
-        # TODO: log result, status should be 200-204
-        # print(json.dumps(m, indent=2))
-        return True
+        if 200 <= res.status_code < 300:
+            logger.info(f'POST request to {config["url"]} returned success code {res.status_code}')
+            return True
+        else:
+            logger.warning(f'POST request to {config["url"]} returned error code {res.status_code}')
+            return False
