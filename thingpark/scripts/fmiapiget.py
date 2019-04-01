@@ -1,11 +1,13 @@
+import argparse
+import datetime
 import json
+import logging
 import math
 import os
+
 import pytz
 import requests
-import datetime
 import xmltodict
-import argparse
 from dateutil.parser import parse
 
 time_fmt = '%Y-%m-%dT%H:%MZ'
@@ -17,25 +19,25 @@ https://opendata.fmi.fi/wfs?request=getFeature&storedquery_id=urban::observation
 105406 100662 101004 106948 100742 106422 100762 106950 100803 104058 100691 100723 106949 105405 104056 101001 104048 106423 105417 100763 106951
 
 # Example measuring stations
-Helsinki Eteläsatama	105406
-Helsinki Kallio 2		100662
-Helsinki Kumpula		101004
-Helsinki Länsisatama 4 	106948
-Helsinki Mannerheimint.	100742
-Helsinki Mechelininkatu	106422
-Helsinki Mäkelänkatu	100762  
-Helsinki Pirkkola		106950  
+Helsinki Eteläsatama	        105406
+Helsinki Kallio 2		        100662
+Helsinki Kumpula		        101004
+Helsinki Länsisatama 4 	        106948
+Helsinki Mannerheimint.	        100742
+Helsinki Mechelininkatu	        106422
+Helsinki Mäkelänkatu        	100762  
+Helsinki Pirkkola		        106950  
 Helsinki Vartiokylä Huivipolku	100803
-Hyvinkää	104058
+Hyvinkää	                    104058
 Espoo Leppävaara Läkkisepänkuja	100691
-Espoo Luukki	100723
-Espoo Länsiväylä Friisilä	106949	
-Kauniainen Kauniaistentie	105405
-Vantaa Itä-Hakkila	104056
-Vantaa Kaivoksela	101001
-Vantaa Lentoasema	104048
-Vantaa Rekola	106423		
-Vantaa Rekola etelä	105417	
+Espoo Luukki	                100723
+Espoo Länsiväylä Friisilä	    106949	
+Kauniainen Kauniaistentie	    105405
+Vantaa Itä-Hakkila          	104056
+Vantaa Kaivoksela	            101001
+Vantaa Lentoasema	            104048
+Vantaa Rekola	                106423		
+Vantaa Rekola etelä	            105417	
 Vantaa Tikkurila Neilikkatie	100763	
 Vantaa Tikkurila Talvikkitie	106951	
 
@@ -50,6 +52,8 @@ http://opendata.fmi.fi/wfs?request=GetFeature&storedquery_id=fmi::observations::
 
 def get_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("-l", "--log", dest="log", choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                        default='ERROR', help="Set the logging level")
     parser.add_argument('-q', '--quiet', action='store_true', help='Never print a char (except on crash)')
     parser.add_argument('-v', '--verbose', action='count', default=0, help='Print some informative messages')
     parser.add_argument('-o', '--outformat', required=True, choices=['csv', 'json', 'pprint'], help='Output format')
@@ -66,7 +70,8 @@ def get_args():
     parser.add_argument('--extraparams', nargs='+', default=[],
                         help='Additional parameters to output json in "key1=val1 [key2=val2 key3=val3 ...]" format')
     args = parser.parse_args()
-    print(args)
+    if args.log:
+        logging.basicConfig(level=getattr(logging, args.log))
     return args
 
 
@@ -77,7 +82,7 @@ def get_fmi_api_url(geoid, storedquery, starttime, endtime, args):
     url = f'https://opendata.fmi.fi/wfs?' \
         f'request=getFeature&storedquery_id={storedquery}&' \
         f'{idfield}={geoid}&startTime={s_str}&endTime={e_str}'
-    print(url)
+    logging.info(f'Fetching data from: {url}')
     return url
 
 
@@ -87,10 +92,10 @@ def get_data_from_fmi_fi(geoid, storedquery, starttime, endtime, args):
     url = get_fmi_api_url(geoid, storedquery, starttime, endtime, args)
     fname = 'fmi_{}_{}-{}.xml'.format(geoid, s_str.replace(':', ''), e_str.replace(':', ''))
     if os.path.isfile(fname):
-        pass
-        # print('Already exists: {}'.format(fname))
+        logging.info(f'Cache file already exists: {fname}')
     else:
         res = requests.get(url)
+        logging.info(f'Saving to cache file: {fname}')
         with open(fname, 'wt') as f:
             f.write(res.text)
     return fname
