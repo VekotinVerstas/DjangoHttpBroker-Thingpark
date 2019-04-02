@@ -109,7 +109,7 @@ def main():
         starttime = endtime - datetime.timedelta(hours=args.timeperiod)
     for stationid in args.stationids:
         data = get_fmi_data(stationid, storedquery, starttime, endtime, args)
-        data['source'] = get_fmi_api_url(stationid, storedquery, starttime, endtime)
+        data['source'] = get_fmi_api_url(stationid, storedquery, starttime, endtime, args)
         res = send_to_ngsi(data)
         print(res.status_code, res.text)
 
