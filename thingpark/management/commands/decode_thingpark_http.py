@@ -1,12 +1,18 @@
+import json
+import logging
+
 import pytz
 from dateutil.parser import parse
-from influxdb.exceptions import InfluxDBClientError
 from django.conf import settings
-from broker.utils import data_pack, data_unpack
-from broker.utils import send_message
+from influxdb.exceptions import InfluxDBClientError
+
 from broker.management.commands import RabbitCommand
-from thingpark.utils import create_influxdb_obj, get_influxdb_client
+from broker.utils import data_pack, data_unpack
 from broker.utils import decode_json_body, get_datalogger, decode_payload
+from broker.utils import send_message
+from thingpark.utils import create_influxdb_obj, get_influxdb_client
+
+logger = logging.getLogger('thingpark')
 
 
 def parse_thingpark_request(serialised_request, data):
@@ -32,13 +38,12 @@ def parse_thingpark_request(serialised_request, data):
         'data': idata,
     }
     packed_message = data_pack(message)
-    print(settings.PARSED_DATA_EXCHANGE, key, packed_message)
+    logger.debug(f'exchange={settings.PARSED_DATA_EXCHANGE} key={key}  packed_message={packed_message}')
     send_message(settings.PARSED_DATA_EXCHANGE, key, packed_message)
-
+    # FIXME: this should be in forwarder
     keys_str = 'aqburk'
     measurement = create_influxdb_obj(devid, keys_str, idata, timestamp)
     measurements = [measurement]
-    # print(json.dumps(measurements, indent=1))
     dbname = 'aqburk'
     iclient = get_influxdb_client(database=dbname)
     iclient.create_database(dbname)
@@ -54,7 +59,9 @@ def consumer_callback(channel, method, properties, body, options=None):
     ok, data = decode_json_body(serialised_request['request.body'])
     if 'DevEUI_uplink' in data:
         parse_thingpark_request(serialised_request, data)
-    print(data)
+    else:
+        logger.warning(f'DevEUI_uplink was not found in data.')
+    logger.debug(json.dumps(data, indent=2))
     channel.basic_ack(method.delivery_tag)
 
 
@@ -67,6 +74,7 @@ class Command(RabbitCommand):
         pass
 
     def handle(self, *args, **options):
+        logger.info(f'Start handling {__name__}')
         options['exchange'] = settings.RAW_HTTP_EXCHANGE
         options['routing_key'] = f'{settings.RABBITMQ["ROUTING_KEY_PREFIX"]}.thingpark.#'
         options['queue'] = 'decode_thingpark_http_queue'
