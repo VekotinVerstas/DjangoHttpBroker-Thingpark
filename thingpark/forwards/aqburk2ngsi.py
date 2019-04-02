@@ -7,6 +7,5 @@ class AQBurk2NGSIForward(ForwardProvider):
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
 
-    def forward_data(self, data):
-        print(data)
+    def forward_data(self, datalogger, data, config):
         return True
