@@ -41,8 +41,10 @@ Vantaa Rekola etelä              105417
 Vantaa Tikkurila Neilikkatie     100763    
 Vantaa Tikkurila Talvikkitie     106951    
 
-Example request for weather observations:
+All stations:
+https://ilmatieteenlaitos.fi/havaintoasemat
 
+Example request for weather observations:
 http://opendata.fmi.fi/wfs?request=GetFeature&storedquery_id=fmi::observations::weather::multipointcoverage&fmisid=100971&timestep=10
 http://opendata.fmi.fi/wfs?request=GetFeature&storedquery_id=fmi::observations::weather::multipointcoverage&geoid=-16000150&timestep=10
 
