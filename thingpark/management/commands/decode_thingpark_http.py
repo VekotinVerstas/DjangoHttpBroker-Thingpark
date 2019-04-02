@@ -7,10 +7,14 @@ from django.conf import settings
 from influxdb.exceptions import InfluxDBClientError
 
 from broker.management.commands import RabbitCommand
-from broker.utils import data_pack, data_unpack
-from broker.utils import decode_json_body, get_datalogger, decode_payload
-from broker.utils import send_message
 from thingpark.utils import create_influxdb_obj, get_influxdb_client
+
+from broker.utils import (
+    create_dataline, create_parsed_data_message,
+    data_pack, data_unpack,
+    decode_json_body, get_datalogger, decode_payload,
+    create_routing_key, send_message
+)
 
 logger = logging.getLogger('thingpark')
 
@@ -24,25 +28,21 @@ def parse_thingpark_request(serialised_request, data):
     timestamp = timestamp.astimezone(pytz.UTC)
     payload_hex = d['payload_hex']
     rssi = d['LrrRSSI']
-    idata = decode_payload(datalogger, payload_hex, port)
-    idata['rssi'] = rssi
+    payload = decode_payload(datalogger, payload_hex, port)
+    payload['rssi'] = rssi
 
     # RabbitMQ part
-    pre = settings.RABBITMQ['ROUTING_KEY_PREFIX']
-    KEY_PREFIX = f'{pre}.thingpark'
-    key = f'{KEY_PREFIX}.{devid}'
-    # FIXME: use create_dataline()
-    message = {
-        'time': timestamp.isoformat() + 'Z',
-        'devid': devid,
-        'data': idata,
-    }
+    key = create_routing_key('thingpark', devid)
+    dataline = create_dataline(timestamp, payload)
+    datalines = [dataline]
+    message = create_parsed_data_message(devid, datalines=datalines)
     packed_message = data_pack(message)
     logger.debug(f'exchange={settings.PARSED_DATA_EXCHANGE} key={key}  packed_message={packed_message}')
     send_message(settings.PARSED_DATA_EXCHANGE, key, packed_message)
-    # FIXME: this should be in forwarder
+
+    # FIXME: this is in forwarder now, must migrate carefully
     keys_str = 'aqburk'
-    measurement = create_influxdb_obj(devid, keys_str, idata, timestamp)
+    measurement = create_influxdb_obj(devid, keys_str, payload, timestamp)
     measurements = [measurement]
     dbname = 'aqburk'
     iclient = get_influxdb_client(database=dbname)
@@ -69,14 +69,20 @@ class Command(RabbitCommand):
     help = 'Decode thingpark'
 
     def add_arguments(self, parser):
-        # parser.add_argument('keys', nargs='+', type=str)
+        parser.add_argument('--prefix', type=str,
+                            help='queue and routing_key prefix, overrides settings.ROUTING_KEY_PREFIX')
         super().add_arguments(parser)
-        pass
 
     def handle(self, *args, **options):
         logger.info(f'Start handling {__name__}')
+        name = 'thingpark'
+        # FIXME: constructing options should be in a function in broker.utils
+        if options["prefix"] is None:
+            prefix = settings.RABBITMQ["ROUTING_KEY_PREFIX"]
+        else:
+            prefix = options["prefix"]
         options['exchange'] = settings.RAW_HTTP_EXCHANGE
-        options['routing_key'] = f'{settings.RABBITMQ["ROUTING_KEY_PREFIX"]}.thingpark.#'
-        options['queue'] = 'decode_thingpark_http_queue'
+        options['routing_key'] = f'{prefix}.{name}.#'
+        options['queue'] = f'{prefix}_decode_{name}_http_queue'
         options['consumer_callback'] = consumer_callback
         super().handle(*args, **options)
