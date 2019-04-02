@@ -39,13 +39,14 @@ class Paxcounter2NGSIForward(ForwardProvider):
         m = ngsi_template.copy()
         # Replace data with real values
         m['id'] = datalogger.devid
-        m['dateObserved'] = data['time']
+        dline = data['datalines'][0]
+        m['dateObserved'] = dline['time']
         if datalogger.lon and datalogger.lat:
             m['location']['coordinates'] = [datalogger.lon, datalogger.lat]
         else:
             del m['location']
-        m['WiFi'] = data['data']['wifi']
-        m['Bluetooth'] = data['data']['ble']
+        m['WiFi'] = dline['data']['wifi']
+        m['Bluetooth'] = dline['data']['ble']
         m['address'] = {
             "addressCountry": datalogger.country,
             "addressLocality": datalogger.locality,
