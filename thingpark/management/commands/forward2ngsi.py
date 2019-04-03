@@ -68,8 +68,9 @@ def push_ngsi_orion(data, url_root, username, password):
 
 def send_to_ngsi(data, options=None):
     devid = data.pop('devid')
-    timestr = data.pop('time')
-    values = data.pop('data')
+    dataline = data['datalines'][0]
+    timestr = dataline.pop('time')
+    values = dataline.pop('data')
     datalogger, created = get_datalogger(devid=devid, update_activity=False)
     forwards = datalogger.forwards.filter(handler='thingpark.AQBurk2NGSIForward')
     if forwards.count() == 0:
@@ -99,7 +100,7 @@ def send_to_ngsi(data, options=None):
         NGSI_DATA['address']['streetAddress'] = ''
 
     # ngsi_json = json.dumps(NGSI_DATA)
-    print(json.dumps(NGSI_DATA, indent=1))
+    # print(json.dumps(NGSI_DATA, indent=2))
     res = push_ngsi_orion(NGSI_DATA, ORION_URL_ROOT, ORION_USERNAME, ORION_PASSWORD)
     return res
 
