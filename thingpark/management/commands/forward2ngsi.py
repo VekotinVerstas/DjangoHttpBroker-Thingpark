@@ -10,15 +10,22 @@ See also https://github.com/Fiware/dataModels/issues/292
   'temp': 23.6, 'humi': 11.0, 'pres': 1039.7, 'gas': 1333.3,
   'rssi': '-82.000000'
 }
+
+NOTE: this is deprecated and will be replaced with Forward
 """
 
 import json
+import logging
+
 import requests
 from django.conf import settings
-from broker.utils import data_pack, data_unpack
+
 from broker.management.commands import RabbitCommand
 from broker.models import Forward
+from broker.utils import data_unpack
 from thingpark.utils import get_datalogger
+
+logger = logging.getLogger('thingpark')
 
 NGSI_DATA = json.loads("""
 {
@@ -78,7 +85,6 @@ def send_to_ngsi(data, options=None):
     # NOTE: this Forward is not currently used, url, user and password are taken from local_settings.py
     f: Forward = forwards[0]
     assert isinstance(NGSI_DATA, dict)
-    # print(values)
     if 'pm25avg' not in values:
         return False
     NGSI_DATA['id'] = devid
@@ -98,9 +104,6 @@ def send_to_ngsi(data, options=None):
         NGSI_DATA['address']['addressCountry'] = ''
         NGSI_DATA['address']['addressLocality'] = ''
         NGSI_DATA['address']['streetAddress'] = ''
-
-    # ngsi_json = json.dumps(NGSI_DATA)
-    # print(json.dumps(NGSI_DATA, indent=2))
     res = push_ngsi_orion(NGSI_DATA, ORION_URL_ROOT, ORION_USERNAME, ORION_PASSWORD)
     return res
 
@@ -109,24 +112,30 @@ def consumer_callback(channel, method, properties, body, options=None):
     data = data_unpack(body)
     res = send_to_ngsi(data, options=options)
     if res:
-        print(res, res.text)
+        logger.info(f'push_ngsi_orion returned {res.status_code} from <{ORION_URL_ROOT}>')
     else:
-        print('No Forwards found!')
-    # res.status_code should be 201 or 204
+        logger.warning(f'push_ngsi_orion FAILED <{ORION_URL_ROOT}>')
     channel.basic_ack(method.delivery_tag)
 
 
 class Command(RabbitCommand):
-    help = 'Decode thingpark'
+    help = 'Forward AQBurk data to NGSI broker'
 
     def add_arguments(self, parser):
-        # parser.add_argument('keys', nargs='+', type=str)
+        parser.add_argument('--prefix', type=str,
+                            help='queue and routing_key prefix, overrides settings.ROUTING_KEY_PREFIX')
         super().add_arguments(parser)
-        pass
 
     def handle(self, *args, **options):
+        logger.info(f'Start handling {__name__}')
+        name = 'forward2ngsi'
+        # FIXME: constructing options should be (probably) in a function in broker.utils
+        if options["prefix"] is None:
+            prefix = settings.RABBITMQ["ROUTING_KEY_PREFIX"]
+        else:
+            prefix = options["prefix"]
         options['exchange'] = settings.PARSED_DATA_EXCHANGE
-        options['routing_key'] = f'{settings.RABBITMQ["ROUTING_KEY_PREFIX"]}.#'
-        options['queue'] = 'forward2ngsi_queue'
+        options['routing_key'] = f'{prefix}.#'  # We want to catch all messages in this handler
+        options['queue'] = f'{prefix}_{name}_queue'
         options['consumer_callback'] = consumer_callback
         super().handle(*args, **options)
