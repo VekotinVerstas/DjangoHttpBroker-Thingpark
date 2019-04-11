@@ -4,7 +4,7 @@ import json
 import logging
 import math
 import os
-
+import time
 import pytz
 import requests
 import xmltodict
@@ -63,6 +63,8 @@ def get_args():
     parser.add_argument('--endtime', help='Endtime in YYYY-mm-ddTHH:MM:SSZ format. Default is current time')
     parser.add_argument('--timeperiod', type=int, default=24,
                         help='Start time delta from endtime in hours (e.g. 12 (hours))')
+    parser.add_argument("--timestep", dest="timestep", choices=['10', '60'],
+                        default='60', help="timestep parameter value in FMI URL")
     parser.add_argument('--storedquery', help='Stored query. Must be multipointcoverage type',
                         default='urban::observations::airquality::hourly::multipointcoverage')
     parser.add_argument('--stationids', required=True, nargs='+', default=[],
@@ -71,6 +73,7 @@ def get_args():
                         help='Id parameter name')
     parser.add_argument('--extraparams', nargs='+', default=[],
                         help='Additional parameters to output json in "key1=val1 [key2=val2 key3=val3 ...]" format')
+    parser.add_argument('-n', '--nocache', action='store_true', help='Do not use cached xml data')
     args = parser.parse_args()
     if args.log:
         logging.basicConfig(level=getattr(logging, args.log))
@@ -81,13 +84,14 @@ def get_fmi_api_url(geoid, storedquery, starttime, endtime, args):
     s_str = starttime.strftime(time_fmt)
     e_str = endtime.strftime(time_fmt)
     idfield = args.idfield
+    timestep = args.timestep
     if idfield == 'fmisid' or geoid.startswith('-'):
         prefix = ''
     else:
         prefix = '-'
     url = f'https://opendata.fmi.fi/wfs?' \
         f'request=getFeature&storedquery_id={storedquery}&' \
-        f'{idfield}={prefix}{geoid}&startTime={s_str}&endTime={e_str}'
+        f'{idfield}={prefix}{geoid}&startTime={s_str}&endTime={e_str}&timestep={timestep}'
     logging.info(f'Fetching data from: {url}')
     return url
 
@@ -97,7 +101,7 @@ def get_data_from_fmi_fi(geoid, storedquery, starttime, endtime, args):
     e_str = endtime.strftime(time_fmt)
     url = get_fmi_api_url(geoid, storedquery, starttime, endtime, args)
     fname = 'fmi_{}_{}-{}.xml'.format(geoid, s_str.replace(':', ''), e_str.replace(':', ''))
-    if os.path.isfile(fname):
+    if os.path.isfile(fname) and args.nocache is False:
         logging.info(f'Cache file already exists: {fname}')
     else:
         res = requests.get(url)
@@ -113,7 +117,7 @@ def fmi_xml_to_dict(fname):
     return d
 
 
-def get_fmi_data(geoid, storedquery, starttime, endtime, args):
+def get_fmi_data_week_max(geoid, storedquery, starttime, endtime, args):
     fmi_xml = get_data_from_fmi_fi(geoid, storedquery, starttime, endtime, args)
     d = fmi_xml_to_dict(fmi_xml)
     # Base element for all interesting data
@@ -142,7 +146,7 @@ def get_fmi_data(geoid, storedquery, starttime, endtime, args):
     # Data types, list of swe:field elements
     raw_dt = base["om:result"]["gmlcov:MultiPointCoverage"]["gmlcov:rangeType"]["swe:DataRecord"]['swe:field']
     data_names = [x['@name'] for x in raw_dt]
-    tl = [int(a.split()[2]) for a in raw_ts.strip().splitlines()]
+    timestamp_lines = [int(a.split()[2]) for a in raw_ts.strip().splitlines()]
     raw_data_lines = raw_dl.splitlines()
     data_lines = []
     for raw_data_line in raw_data_lines:
@@ -151,9 +155,29 @@ def get_fmi_data(geoid, storedquery, starttime, endtime, args):
         # Create list of key value pairs
         keyvalues = list(zip(data_names, data_values))
         data_lines.append(keyvalues)
+    return name, lat, lon, timestamp_lines, data_lines
+
+
+def get_fmi_data(geoid, storedquery, starttime, endtime, args):
+    name, lat, lon, t_timestamp_lines, t_data_lines = None, None, None, [], []
+    temp_starttime = starttime
+    timestamp_lines = []
+    data_lines = []
+    while temp_starttime <= endtime:
+        temp_endtime = temp_starttime + datetime.timedelta(hours=7 * 24)
+        if temp_endtime > endtime:
+            temp_endtime = endtime
+        logging.debug(f'Getting time period {temp_starttime} - {temp_endtime}')
+        name, lat, lon, t_timestamp_lines, t_data_lines = get_fmi_data_week_max(geoid, storedquery, temp_starttime,
+                                                                                temp_endtime, args)
+        timestamp_lines += t_timestamp_lines
+        data_lines += t_data_lines
+        temp_starttime = temp_starttime + datetime.timedelta(hours=7 * 24)
+        logging.info('Sleeping')
+        time.sleep(1)
     parsed_lines = []
-    for i in range(len(tl)):
-        timestmap = datetime.datetime.utcfromtimestamp(tl[i])
+    for i in range(len(timestamp_lines)):
+        timestmap = datetime.datetime.utcfromtimestamp(timestamp_lines[i])
         parsed_line = {
             'time': timestmap.isoformat() + 'Z',
             'data': data_lines[i]
