@@ -28,7 +28,7 @@ def parse_thingpark_request(serialised_request, data):
     timestamp = timestamp.astimezone(pytz.UTC)
     payload_hex = d['payload_hex']
     rssi = d['LrrRSSI']
-    payload = decode_payload(datalogger, payload_hex, port)
+    payload = decode_payload(datalogger, payload_hex, port=port)
     payload['rssi'] = rssi
 
     # RabbitMQ part

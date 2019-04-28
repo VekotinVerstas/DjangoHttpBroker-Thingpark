@@ -4,7 +4,7 @@ https://github.com/cyberman54/ESP32-Paxcounter/blob/master/src/TTN/plain_decoder
 """
 
 
-def parse_paxcounter(payload_hex, port):
+def parse_paxcounter(payload_hex, port=None):
     if port == '1':
         data = {
             'wifi': int(payload_hex[0:4], 16),
