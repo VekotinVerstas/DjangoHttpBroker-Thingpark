@@ -45,8 +45,12 @@ class Paxcounter2NGSIForward(ForwardProvider):
             m['location']['coordinates'] = [datalogger.lon, datalogger.lat]
         else:
             del m['location']
-        m['WiFi'] = dline['data']['wifi']
-        m['Bluetooth'] = dline['data']['ble']
+            m['WiFi'] = dline['data'].get('wifi')
+            m['Bluetooth'] = dline['data'].get('ble')
+
+        if m['WiFi'] is None and m['Bluetooth'] is None:
+            logger.warning(f'Paxcounter {datalogger.devid} without wifi or ble data')
+            return False
         m['address'] = {
             "addressCountry": datalogger.country,
             "addressLocality": datalogger.locality,
