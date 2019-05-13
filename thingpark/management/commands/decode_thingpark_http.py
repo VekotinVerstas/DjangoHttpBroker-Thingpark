@@ -57,11 +57,11 @@ def parse_thingpark_request(serialised_request, data):
 def consumer_callback(channel, method, properties, body, options=None):
     serialised_request = data_unpack(body)
     ok, data = decode_json_body(serialised_request['request.body'])
-    if 'DevEUI_uplink' in data:
+    if ok and 'DevEUI_uplink' in data:
         parse_thingpark_request(serialised_request, data)
+        logger.debug(json.dumps(data, indent=2))
     else:
         logger.warning(f'DevEUI_uplink was not found in data.')
-    logger.debug(json.dumps(data, indent=2))
     channel.basic_ack(method.delivery_tag)
 
 
