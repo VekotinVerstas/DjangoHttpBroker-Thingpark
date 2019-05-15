@@ -5,6 +5,6 @@ from thingpark.parsers import parse_aqburk
 class AQBurkDecoder(DecoderProvider):
     description = 'Decode AQBurk payload'
 
-    def decode_payload(self, hex_payload, **kwargs):
-        data = parse_aqburk(hex_payload, port=kwargs['port'])
+    def decode_payload(self, hex_payload, port, **kwargs):
+        data = parse_aqburk(hex_payload, port)
         return data
