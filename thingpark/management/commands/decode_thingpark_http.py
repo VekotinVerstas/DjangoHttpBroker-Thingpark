@@ -45,7 +45,7 @@ def parse_thingpark_request(serialised_request, data):
         }
         save_parse_fail_datalogger_message(devid, data_pack(serialised_request))
         return True
-    payload['rssi'] = rssi
+    payload['rssi'] = float(rssi)
     logging.debug(payload)
 
     # RabbitMQ part

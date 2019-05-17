@@ -11,10 +11,10 @@ def parse_paxcounter(payload_hex, port=None):
         # We assume here PAXCOUNTER is configured to send data in "plain" format
         # paxcounter.conf: #define PAYLOAD_ENCODER                 1
         if payload_len == 4:
-            data['wifi'] = int(payload_hex[0:4], 16)
+            data['wifi'] = float(int(payload_hex[0:4], 16))
         elif payload_len == 8:
-            data['wifi'] = int(payload_hex[0:4], 16)
-            data['ble'] = int(payload_hex[4:8], 16)
+            data['wifi'] = float(int(payload_hex[0:4], 16))
+            data['ble'] = float(int(payload_hex[4:8], 16))
     # TODO: Other ports and payload formats are not implemented yet
     # else:
     #     raise ValueError(f'Unknown port "{port}"')
