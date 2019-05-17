@@ -12,6 +12,8 @@ from thingpark.utils import create_influxdb_obj, get_influxdb_client
 from broker.utils import (
     create_dataline, create_parsed_data_message,
     data_pack, data_unpack,
+    get_datalogger_decoder,
+    save_parse_fail_datalogger_message,
     decode_json_body, get_datalogger, decode_payload,
     create_routing_key, send_message
 )
@@ -28,8 +30,23 @@ def parse_thingpark_request(serialised_request, data):
     timestamp = timestamp.astimezone(pytz.UTC)
     payload_hex = d['payload_hex']
     rssi = d['LrrRSSI']
-    payload = decode_payload(datalogger, payload_hex, port)
+    # TODO: This may fail, so prepare to handle exception properly
+    # Test it by configuring wrong decoder for some Datalogger
+    try:
+        payload = decode_payload(datalogger, payload_hex, port)
+    except ValueError as err:
+        decoder = get_datalogger_decoder(datalogger)
+        err_msg = f'Failed to parse "{payload_hex}" using "{decoder}" for "{devid}": {err}'
+        logger.warning(err_msg)
+        # print(err_msg)
+        serialised_request['parse_fail'] = {
+            'error_message': str(err),
+            'decoder': get_datalogger_decoder(datalogger)
+        }
+        save_parse_fail_datalogger_message(devid, data_pack(serialised_request))
+        return True
     payload['rssi'] = rssi
+    logging.debug(payload)
 
     # RabbitMQ part
     key = create_routing_key('thingpark', devid)
@@ -37,21 +54,17 @@ def parse_thingpark_request(serialised_request, data):
     datalines = [dataline]
     message = create_parsed_data_message(devid, datalines=datalines)
     packed_message = data_pack(message)
+    exchange = settings.PARSED_DATA_HEADERS_EXCHANGE
     logger.debug(f'exchange={settings.PARSED_DATA_EXCHANGE} key={key}  packed_message={packed_message}')
-    send_message(settings.PARSED_DATA_EXCHANGE, key, packed_message)
-
-    # FIXME: this is in forwarder now, must migrate carefully
-    keys_str = 'aqburk'
-    measurement = create_influxdb_obj(devid, keys_str, payload, timestamp)
-    measurements = [measurement]
-    dbname = 'aqburk'
-    iclient = get_influxdb_client(database=dbname)
-    iclient.create_database(dbname)
-    try:
-        iclient.write_points(measurements)
-        return True
-    except InfluxDBClientError as err:
-        return False
+    config = {}
+    # TODO: implement and use get_datalogger_config()
+    if datalogger.application:
+        config = json.loads(datalogger.application.config)
+    # TODO: get influxdb variables from Application / Datalogger / Forward etc config
+    if 'influxdb_database' in config and 'influxdb_measurement' in config:
+        config['influxdb'] = '1'
+    send_message(exchange, '', packed_message, headers=config)
+    return True
 
 
 def consumer_callback(channel, method, properties, body, options=None):
