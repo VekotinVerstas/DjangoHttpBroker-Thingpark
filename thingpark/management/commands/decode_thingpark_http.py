@@ -45,13 +45,18 @@ def parse_thingpark_request(serialised_request, data):
         }
         save_parse_fail_datalogger_message(devid, data_pack(serialised_request))
         return True
-    payload['rssi'] = float(rssi)
     logging.debug(payload)
+
+    # Some sensors may already return a list of datalines
+    if isinstance(payload, list):
+        datalines = payload  # Use payload as datalines (which already have timestamps)
+    else:
+        dataline = create_dataline(timestamp, payload)  # Create dataline from LoRaWAN timestamp and payload
+        datalines = [dataline]
+    datalines[-1]['data']['rssi'] = float(rssi)  # Add rssi value to the latest dataline
 
     # RabbitMQ part
     key = create_routing_key('thingpark', devid)
-    dataline = create_dataline(timestamp, payload)
-    datalines = [dataline]
     message = create_parsed_data_message(devid, datalines=datalines)
     packed_message = data_pack(message)
     exchange = settings.PARSED_DATA_HEADERS_EXCHANGE
