@@ -2,6 +2,7 @@ from .aqburk import parse_aqburk
 from .clickey import parse_clickey_tempsens
 from .keyval import parse_keyval
 from .paxcounter import parse_paxcounter
+from .energiaburk import parse_energiaburk
 
 
 def parse(payload_hex):
