@@ -4,6 +4,7 @@ from .keyval import parse_keyval
 from .paxcounter import parse_paxcounter
 from .energiaburk import parse_energiaburk
 from .sensornode import parse_sensornode
+from .decentlab import parse_decentlab
 
 
 def parse(payload_hex):
