@@ -99,6 +99,7 @@ def parse_decentlab(hex_str, port=None):
         'dielectric_permittivity': decoded['Dielectric permittivity']['value'],
         'volumetric_water_content': decoded['Volumetric water content']['value'],
         'electrical_conductivity': decoded['Electrical conductivity']['value'],
+        'temp_soil': decoded['Soil temperature']['value'],
         'batt': decoded['Battery voltage']['value'],
     }
     return data
