@@ -104,7 +104,10 @@ def get_data_from_fmi_fi(geoid, storedquery, starttime, endtime, args):
     if os.path.isfile(fname) and args.nocache is False:
         logging.info(f'Cache file already exists: {fname}')
     else:
+        # TODO: do error handling here
         res = requests.get(url)
+        if res.status_code != 200:
+            logging.error(f'FMI API returned {res.status_code}! Check file {fname} for errors.')
         logging.info(f'Saving to cache file: {fname}')
         with open(fname, 'wt') as f:
             f.write(res.text)
