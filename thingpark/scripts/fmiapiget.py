@@ -130,18 +130,16 @@ def get_fmi_data_week_max(geoid, storedquery, starttime, endtime, args):
     # Base element for all interesting data
     try:
         base = d["wfs:FeatureCollection"]["wfs:member"]["omso:GridSeriesObservation"]
-
     except KeyError as err:
         if 'ExceptionReport' in d:
-            print('ERROR: FMI sent us an exception:\n')
-            print('\n'.join(d['ExceptionReport']['Exception']['ExceptionText']))
-            print()
-            raise
-        exit(1)
-    # Name & nocation
+            msg = 'FMI sent us an exception:\n'
+            msg += '\n'.join(d['ExceptionReport']['Exception']['ExceptionText'])
+            logging.warning(msg)
+        else:
+            raise  # Catch this in calling function and continue
+    # Name & location
     base_position = base["om:featureOfInterest"]["sams:SF_SpatialSamplingFeature"]["sams:shape"]["gml:MultiPoint"][
         "gml:pointMember"]["gml:Point"]
-
     name = base_position["gml:name"]
     lat, lon = [float(x) for x in base_position["gml:pos"].split(' ')]
     # Timestamps
@@ -175,8 +173,13 @@ def get_fmi_data(geoid, storedquery, starttime, endtime, args):
         if temp_endtime > endtime:
             temp_endtime = endtime
         logging.debug(f'Getting time period {temp_starttime} - {temp_endtime}')
-        name, lat, lon, t_timestamp_lines, t_data_lines = get_fmi_data_week_max(geoid, storedquery, temp_starttime,
-                                                                                temp_endtime, args)
+        try:
+            name, lat, lon, t_timestamp_lines, t_data_lines = get_fmi_data_week_max(geoid, storedquery, temp_starttime,
+                                                                                    temp_endtime, args)
+        except KeyError as err:
+            logging.warning(f'Got KeyError with missing key {err}, ignoring this data')
+            temp_starttime = temp_starttime + datetime.timedelta(hours=7 * 24)
+            continue
         timestamp_lines += t_timestamp_lines
         data_lines += t_data_lines
         temp_starttime = temp_starttime + datetime.timedelta(hours=7 * 24)

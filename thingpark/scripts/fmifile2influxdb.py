@@ -76,6 +76,7 @@ if __name__ == '__main__':
             print('wrote {} measurements'.format(len(measurements)))
         except InfluxDBClientError as err:
             err_msg = f'InfluxDB error: {err}'
+            print(err_msg)
             # logger.error(f'devid={devid} {err_msg}')
         # print(json.dumps(measurements, indent=1))
         # exit()
