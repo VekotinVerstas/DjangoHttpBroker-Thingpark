@@ -58,6 +58,7 @@ def get_args():
                         default='ERROR', help="Set the logging level")
     parser.add_argument('-q', '--quiet', action='store_true', help='Never print a char (except on crash)')
     parser.add_argument('-v', '--verbose', action='count', default=0, help='Print some informative messages')
+    parser.add_argument('--cachefile', action='store_true', help='Store response data locally as a file')
     parser.add_argument('-o', '--outformat', required=True, choices=['csv', 'json', 'pprint'], help='Output format')
     parser.add_argument('--starttime', help='Endtime in YYYY-mm-ddTHH:MM:SSZ format. Default is endtime-24h')
     parser.add_argument('--endtime', help='Endtime in YYYY-mm-ddTHH:MM:SSZ format. Default is current time')
@@ -65,6 +66,8 @@ def get_args():
                         help='Start time delta from endtime in hours (e.g. 12 (hours))')
     parser.add_argument("--timestep", dest="timestep", choices=['10', '60'],
                         default='60', help="timestep parameter value in FMI URL")
+    parser.add_argument('--wait', type=float, default=1,
+                        help='Time to wait (in seconds) between requests')
     parser.add_argument('--storedquery', help='Stored query. Must be multipointcoverage type',
                         default='urban::observations::airquality::hourly::multipointcoverage')
     parser.add_argument('--stationids', required=True, nargs='+', default=[],
@@ -123,6 +126,7 @@ def fmi_xml_to_dict(fname):
 def get_fmi_data_week_max(geoid, storedquery, starttime, endtime, args):
     fmi_xml = get_data_from_fmi_fi(geoid, storedquery, starttime, endtime, args)
     d = fmi_xml_to_dict(fmi_xml)
+    # TODO: remove fmi_xml
     # Base element for all interesting data
     try:
         base = d["wfs:FeatureCollection"]["wfs:member"]["omso:GridSeriesObservation"]
@@ -176,8 +180,8 @@ def get_fmi_data(geoid, storedquery, starttime, endtime, args):
         timestamp_lines += t_timestamp_lines
         data_lines += t_data_lines
         temp_starttime = temp_starttime + datetime.timedelta(hours=7 * 24)
-        logging.info('Sleeping')
-        time.sleep(1)
+        logging.debug('Sleeping')
+        time.sleep(args.wait)
     parsed_lines = []
     for i in range(len(timestamp_lines)):
         timestmap = datetime.datetime.utcfromtimestamp(timestamp_lines[i])
