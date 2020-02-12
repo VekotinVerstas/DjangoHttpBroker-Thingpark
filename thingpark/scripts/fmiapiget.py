@@ -188,9 +188,14 @@ def get_fmi_data(geoid, storedquery, starttime, endtime, args):
     parsed_lines = []
     for i in range(len(timestamp_lines)):
         timestmap = datetime.datetime.utcfromtimestamp(timestamp_lines[i])
+        data = []
+        # Rip off null values
+        for d in data_lines[i]:
+            if d[1] is not None:
+                data.append([d[0], float(d[1])])
         parsed_line = {
             'time': timestmap.isoformat() + 'Z',
-            'data': data_lines[i]
+            'data': data
         }
         parsed_lines.append(parsed_line)
     data = {
