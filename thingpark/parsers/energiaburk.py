@@ -67,6 +67,39 @@ def parse_victron(hex_str, port=None):
     return data
 
 
+def parse_davisweather(hex_str, port=None):
+    """
+    Parse payload like "0a00000000e83c4600a83b4600000000000000000000ba42000000000000000000008041000081430000000000000000" struct of mixed values
+    :param hex_str: Victron hex payload
+    :param port: LoRaWAN port
+    :return: dict containing values
+    """
+
+    b = bytes.fromhex(hex_str)
+    val = struct.unpack('<Bbxxfffffffffii', b)
+
+    data = {
+        # 2  float mainVoltage_V;      // mV
+        # 3  float panelVoltage_VPV;   // mV
+        # 4  float panelPower_PPV;     // W
+        # 5  float batteryCurrent_I;   // mA
+        # 6  float yieldTotal_H19;     // 0.01 kWh
+        # 7  float yieldToday_H20;     // 0.01 kWh
+        # 8  float maxPowerToday_H21;  // W
+        # 9  float yieldYesterday_H22; // 0.01 kWh
+        # 10  float maxPowerYesterday_H23; // W
+        # 11  int errorCode_ERR;
+        # 12  int stateOfOperation_CS;
+        'mainvoltage': val[2],
+        'panelvoltage': val[3],
+        'panelpower': val[4],
+        'batterycurrent': val[5],
+        'errorcode': val[11],  # int
+        'state': val[12],  # int
+    }
+    return data
+
+
 def parse_joniburk(hex_str, port=None):
     """
     Parse payload like "3a2c007d0003002a000000000000000000000000" float values
@@ -95,3 +128,10 @@ def parse_voltageburk(hex_str, port=None):
         'voltage': volt,
     }
     return data
+
+
+if __name__ == '__main__':
+    import sys
+    import json
+
+    print(json.dumps(parse_davisweather(sys.argv[1]), indent=1))
