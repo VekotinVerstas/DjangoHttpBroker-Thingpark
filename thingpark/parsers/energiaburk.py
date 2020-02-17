@@ -32,6 +32,8 @@ def parse_energiaburk(hex_str, port=None):
         return parse_voltageburk(hex_str)
     elif hex_str.startswith('0a00'):
         return parse_victron(hex_str)
+    elif hex_str.startswith('0700'):
+        return parse_davisweather(hex_str)
 
 
 def parse_victron(hex_str, port=None):
@@ -76,7 +78,7 @@ def parse_davisweather(hex_str, port=None):
     """
 
     b = bytes.fromhex(hex_str)
-    val = struct.unpack('<Bbxxfffffffffii', b)
+    # val = struct.unpack('<Bbxxfffffffffii', b)
 
     data = {
         # 2  float mainVoltage_V;      // mV
@@ -90,12 +92,7 @@ def parse_davisweather(hex_str, port=None):
         # 10  float maxPowerYesterday_H23; // W
         # 11  int errorCode_ERR;
         # 12  int stateOfOperation_CS;
-        'mainvoltage': val[2],
-        'panelvoltage': val[3],
-        'panelpower': val[4],
-        'batterycurrent': val[5],
-        'errorcode': val[11],  # int
-        'state': val[12],  # int
+        'THIS IS PLACEHOLDER': 42.0
     }
     return data
 
@@ -134,4 +131,4 @@ if __name__ == '__main__':
     import sys
     import json
 
-    print(json.dumps(parse_davisweather(sys.argv[1]), indent=1))
+    print(json.dumps(parse_energiaburk(sys.argv[1]), indent=1))
