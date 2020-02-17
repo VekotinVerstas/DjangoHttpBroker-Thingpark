@@ -71,28 +71,47 @@ def parse_victron(hex_str, port=None):
 
 def parse_davisweather(hex_str, port=None):
     """
-    Parse payload like "0a00000000e83c4600a83b4600000000000000000000ba42000000000000000000008041000081430000000000000000" struct of mixed values
-    :param hex_str: Victron hex payload
+    Parse payload like "0700fd729601575293010b12fe00000000ffff7f580013b40000aa000002590300c1" struct of mixed values
+    :param hex_str: Davis weather station hex payload
     :param port: LoRaWAN port
     :return: dict containing values
     """
 
     b = bytes.fromhex(hex_str)
-    # val = struct.unpack('<Bbxxfffffffffii', b)
-
+    val = struct.unpack('<BbHhBxhBBHBHBHHHHHHBHB', b)  # Capital is unsigned, b 8bit h 16bit, x 8bit padding
     data = {
-        # 2  float mainVoltage_V;      // mV
-        # 3  float panelVoltage_VPV;   // mV
-        # 4  float panelPower_PPV;     // W
-        # 5  float batteryCurrent_I;   // mA
-        # 6  float yieldTotal_H19;     // 0.01 kWh
-        # 7  float yieldToday_H20;     // 0.01 kWh
-        # 8  float maxPowerToday_H21;  // W
-        # 9  float yieldYesterday_H22; // 0.01 kWh
-        # 10  float maxPowerYesterday_H23; // W
-        # 11  int errorCode_ERR;
-        # 12  int stateOfOperation_CS;
-        'THIS IS PLACEHOLDER': 42.0
+        # 0  int DavisDataCode 07
+        # 1  data version 0
+        # 2  uint16_t Current barometer as (Hg / 1000)
+        # 3  int16_t Inside Temperature as (DegF / 10)
+        # 4  uint8_t Inside Humidity as percentage
+        # 5  int16_t Outside Temperature as (DegF / 10)
+        # 6  uint8_t Wind Speed
+        # 7  uint8_t 10-Minute Average Wind Speed
+        # 8  uint16_t Wind Direction in degress
+        # 9  uint8_t Outside Humidity
+        # 10 uint16_t Rain Rate
+        # 11 uint8_t UV Level
+        # 12 uint16_t Solar Radiation
+        # 13 uint16_t Total Storm Rain
+        # 14 uint16_t Start date of current storm
+        # 15 uint16_t Rain Today
+        # 16 uint16_t Rain this Month
+        # 17 uint16_t Rain this Year
+        # 18 uint8_t Transmitter battery status
+        # 19 uint16_t Console Battery Level:
+        # 20 uint8_t Forecast Icon
+        # 21 uint8_t Forecast rule number
+        'barometer': round(((val[2] / 1000) * 33.86389), 1),
+        'in_temperature': round((((val[3] / 10) - 32) / 1.8), 1),
+        'in_humity': val[4],
+        'out_temperature': round((((val[5] / 10) - 32) / 1.8), 1),
+        'windspeed': val[6],
+        '10minwind': val[7],
+        'winddirection': val[8],
+        'out_humity': val[9],
+        'rain': val[10],
+        'raintoday': val[15],
     }
     return data
 
