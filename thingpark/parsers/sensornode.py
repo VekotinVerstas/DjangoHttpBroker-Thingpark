@@ -7,7 +7,7 @@ import struct
 
 SENSORNODE_CSV = """ID;Table;Name;Size;Units
 1;;System Firmware version (reset message);4;Struct
-10;gps;GPS Position;6;Struct
+10;;GPS Position;6;Struct
 20;batt;Battery Voltage;2;UINT16 (mV)
 21;analog1;Analog In 1;2; UINT16 (mV)
 22;analog2;Analog In 2;2; UINT16 (mV)
@@ -53,14 +53,32 @@ def parse_sensornode(hex_str, port=None):
             hex_str = hex_str[2:]
             continue
         x = bytes.fromhex(chunk)
+        if _id in [10]:  # GPS data
+            def convert_deg(b):
+                return int.from_bytes(b, byteorder='little', signed=True) / 10 ** 7 * 256.0
+
+            data['lat'], data['lon'] = convert_deg(x[0:3]), convert_deg(x[3:6])
         if _id in [20, 21, 22, 23]:  # mV
             data[t['table']] = struct.unpack('<H', x)[0] / 1000
         if _id in [30, 31, 32, 33]:  # count
             data[t['table']] = struct.unpack('<H', x)[0]
         if _id in [40, 41, 42]:  # °C * 100
             data[t['table']] = struct.unpack('<h', x)[0] / 100
+        if _id in [43]:  # temp & humidity
+            data['temprh_temp'] = struct.unpack('<h', x[:2])[0] / 100
+            data['temprh_rh'] = x[2] / 2
         if (len(hex_str) == 0):
             break
         _id = int(hex_str[:2], 16)
         hex_str = hex_str[2:]
     return data
+
+
+if __name__ == '__main__':
+    import sys
+
+    try:
+        print(parse_sensornode(sys.argv[1], 10))
+    except IndexError as err:
+        print(f'\nUsage: {sys.argv[0]} hex_payload port\n\n')
+        raise
