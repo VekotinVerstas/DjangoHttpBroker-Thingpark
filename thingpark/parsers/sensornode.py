@@ -53,7 +53,7 @@ def parse_sensornode(hex_str, port=None):
             hex_str = hex_str[2:]
             continue
         x = bytes.fromhex(chunk)
-        if _id in [10]:  # GPS data
+        if _id in [10] and x[0] != 255:  # GPS data with fix 
             def convert_deg(b):
                 return int.from_bytes(b, byteorder='little', signed=True) / 10 ** 7 * 256.0
 
@@ -76,9 +76,15 @@ def parse_sensornode(hex_str, port=None):
 
 if __name__ == '__main__':
     import sys
-
     try:
         print(parse_sensornode(sys.argv[1], 10))
     except IndexError as err:
+        print('Some examples:')
+        for s in [('01e32337f80e14941228ba01295701', 10),
+                  ('ffffffffffff2b840846299108143414', 10),
+                  ('0d0016090028b30b143414', 21),
+                          ]:
+            print(parse_sensornode(s[0], s[1]))
+
         print(f'\nUsage: {sys.argv[0]} hex_payload port\n\n')
         raise
