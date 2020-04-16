@@ -21,40 +21,7 @@ from broker.utils import (
 logger = logging.getLogger('thingpark')
 
 
-def parse_thingpark_request(serialised_request, data):
-    d = data['DevEUI_uplink']
-    devid = d['DevEUI']
-    port = d['FPort']
-    datalogger, created = get_datalogger(devid=devid, update_activity=False)
-    timestamp = parse(d['Time'])
-    timestamp = timestamp.astimezone(pytz.UTC)
-    payload_hex = d['payload_hex']
-    rssi = d['LrrRSSI']
-    # TODO: This may fail, so prepare to handle exception properly
-    # Test it by configuring wrong decoder for some Datalogger
-    try:
-        payload = decode_payload(datalogger, payload_hex, port)
-    except ValueError as err:
-        decoder = get_datalogger_decoder(datalogger)
-        err_msg = f'Failed to parse "{payload_hex}" using "{decoder}" for "{devid}": {err}'
-        logger.warning(err_msg)
-        # print(err_msg)
-        serialised_request['parse_fail'] = {
-            'error_message': str(err),
-            'decoder': get_datalogger_decoder(datalogger)
-        }
-        save_parse_fail_datalogger_message(devid, data_pack(serialised_request))
-        return True
-    logging.debug(payload)
-
-    # Some sensors may already return a list of datalines
-    if isinstance(payload, list):
-        datalines = payload  # Use payload as datalines (which already have timestamps)
-    else:
-        dataline = create_dataline(timestamp, payload)  # Create dataline from LoRaWAN timestamp and payload
-        datalines = [dataline]
-    datalines[-1]['data']['rssi'] = float(rssi)  # Add rssi value to the latest dataline
-
+def send_to_exchange(devid, datalogger, datalines, override_measurement=None):
     # RabbitMQ part
     key = create_routing_key('thingpark', devid)
     message = create_parsed_data_message(devid, datalines=datalines)
@@ -68,7 +35,52 @@ def parse_thingpark_request(serialised_request, data):
     # TODO: get influxdb variables from Application / Datalogger / Forward etc config
     if 'influxdb_database' in config and 'influxdb_measurement' in config:
         config['influxdb'] = '1'
+        if override_measurement is not None:
+            config['influxdb_measurement'] = override_measurement
     send_message(exchange, '', packed_message, headers=config)
+
+
+def parse_thingpark_request(serialised_request, data):
+    d = data['DevEUI_uplink']
+    devid = d['DevEUI']
+    port = d['FPort']
+    datalogger, created = get_datalogger(devid=devid, update_activity=False)
+    timestamp = parse(d['Time'])
+    timestamp = timestamp.astimezone(pytz.UTC)
+    payload_hex = d['payload_hex']
+    rssi = d['LrrRSSI']
+    # TODO: This may fail, so prepare to handle exception properly
+    # Test it by configuring wrong decoder for some Datalogger
+    try:
+        payload = decode_payload(datalogger, payload_hex, port, serialised_request=serialised_request)
+    except ValueError as err:
+        decoder = get_datalogger_decoder(datalogger)
+        err_msg = f'Failed to parse "{payload_hex}" using "{decoder}" for "{devid}": {err}'
+        logger.warning(err_msg)
+        serialised_request['parse_fail'] = {
+            'error_message': str(err),
+            'decoder': get_datalogger_decoder(datalogger)
+        }
+        save_parse_fail_datalogger_message(devid, data_pack(serialised_request))
+        return True
+    logging.debug(payload)
+
+    # Some sensors may already return a dict of lists of datalines
+    if isinstance(payload, dict):
+        parsed_data = payload
+        for k in parsed_data.keys():
+            datalines = parsed_data[k]['datalines']
+            if len(datalines) > 0:
+                datalines[-1]['data']['rssi'] = float(rssi)  # Add rssi value to the latest dataline
+                send_to_exchange(devid, datalogger, datalines, override_measurement=k)
+    else:  # Some sensors may already return a list of datalines
+        if isinstance(payload, list):
+            datalines = payload  # Use payload as datalines (which already have timestamps)
+        else:
+            dataline = create_dataline(timestamp, payload)  # Create dataline from LoRaWAN timestamp and payload
+            datalines = [dataline]
+        datalines[-1]['data']['rssi'] = float(rssi)  # Add rssi value to the latest dataline
+        send_to_exchange(devid, datalogger, datalines)
     return True
 
 
