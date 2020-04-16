@@ -66,7 +66,9 @@ def parse_thingpark_request(serialised_request, data):
     logging.debug(payload)
 
     # Some sensors may already return a dict of lists of datalines
-    if isinstance(payload, dict):
+    if not payload:
+        return True
+    if isinstance(payload, dict) and isinstance(payload[list(payload.keys())[0]], dict):
         parsed_data = payload
         for k in parsed_data.keys():
             datalines = parsed_data[k]['datalines']
