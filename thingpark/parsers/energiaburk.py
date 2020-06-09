@@ -34,6 +34,33 @@ def parse_energiaburk(hex_str, port=None):
         return parse_victron(hex_str)
     elif hex_str.startswith('0700'):
         return parse_davisweather(hex_str)
+    elif hex_str.startswith('d77e'):
+        return parse_ircounter(hex_str)
+
+
+def parse_ircounter(hex_str, port=None):
+    """
+    Parse payload like "d77e3700030002" or "d77e070dae3700040001" struct of mixed values
+    :param hex_str: IR counter hex payload
+    :param port: LoRaWAN port
+    :return: dict containing values
+    """
+    data = None
+
+    if (hex_str[4:6] == "07"):
+        data = {
+            'voltage': int(hex_str[6:10], 16),  # millivolts in pcb not at car battery
+            'in': int(hex_str[12:16]),
+            'out': int(hex_str[16:20]),
+        }
+
+    if (hex_str[4:6] == "37"):
+        data = {
+            'in': int(hex_str[6:10]),
+            'out': int(hex_str[10:14]),
+        }
+
+    return data
 
 
 def parse_victron(hex_str, port=None):
