@@ -77,7 +77,7 @@ def parse_sensornode(hex_str, port=None):
 if __name__ == '__main__':
     import sys
     try:
-        print(parse_sensornode(sys.argv[1], 10))
+        print(parse_sensornode(sys.argv[1], sys.argv[2]))
     except IndexError as err:
         print('Some examples:')
         for s in [('01e32337f80e14941228ba01295701', 10),
