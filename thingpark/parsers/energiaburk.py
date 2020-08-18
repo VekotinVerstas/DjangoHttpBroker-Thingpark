@@ -27,7 +27,7 @@ def parse_energiaburk(hex_str, port=None):
     :return: dict containing float values
     """
     if hex_str.startswith('3a'):
-        return parse_joniburk(hex_str)
+        return parse_aurinkopenkki(hex_str)
     elif hex_str.startswith('09'):
         return parse_voltageburk(hex_str)
     elif hex_str.startswith('0a00'):
@@ -36,7 +36,6 @@ def parse_energiaburk(hex_str, port=None):
         return parse_davisweather(hex_str)
     elif hex_str.startswith('d77e'):
         return parse_ircounter(hex_str)
-
 
 def parse_ircounter(hex_str, port=None):
     """
@@ -143,17 +142,37 @@ def parse_davisweather(hex_str, port=None):
     return data
 
 
-def parse_joniburk(hex_str, port=None):
+def parse_aurinkopenkki(hex_str, port=None):
     """
-    Parse payload like "3a2c007d0003002a000000000000000000000000" float values
+    Parse payload like "3a2c0000018906438046933f478a773cc82a00003501000000000000113b00002f000000" float values
     :param hex_str: EnergiaBurk hex payload
     :param port: LoRaWAN port
     :return: dict containing float values
     """
+    b = bytes.fromhex(hex_str)
+    val = struct.unpack('<BbxxfffIIIII', b)
+
+    #struct t_AcudcDATA { 
+    # uint8_t msg_type;
+    # uint8_t msg_ver;
+    # float volt;
+    # float amp;
+    # float watt;
+    # uint32_t runTime;
+    # uint32_t inEnergy;
+    # uint32_t outEnergy;
+    # uint32_t inAh;
+    # uint32_t outAh;
+    
     data = {
-        'voltage': hex2value10(hex_str[4:8]),
-        'current': hex2value10(hex_str[8:12]),
-        'power': hex2value10(hex_str[12:16]),
+        'voltage': val[2],
+        'current': val[3],
+        'power': val[4],
+        'runtime': val[5],
+        'inEnergy': val[6],
+        'outEnergy': val[7],
+        'inmAh': val[8],
+        'outmAh': val[9],
     }
     return data
 
