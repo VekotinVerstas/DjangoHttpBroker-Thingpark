@@ -137,17 +137,17 @@ def parse_victronphoenix(hex_str, port=None):
         # 19 uint8_t p_CS; // convert to 8 bit
         # 20 uint8_t p_MODE;
 
-        'mainvoltage': val[2],
-        'panelvoltage': val[3]/10,
-        'panelpower': val[4],
-        'batterycurrent': val[5]/10,
-        'yieldTotal': val[6],
-        'yieldToday': val[7],
-        'maxPowerToday': val[8],
-        'yieldYesterday': val[9],
-        'maxPowerYesterday': val[10],
-        'errorcode': val[11],  # int
-        'state': val[12],  # int
+        'mpptmainvoltage': val[2],
+        'mpptpanelvoltage': val[3]/10,
+        'mpptpanelpower': val[4],
+        'mpptbatterycurrent': val[5]/10,
+        'mpptyieldTotal': val[6],
+        'mpptyieldToday': val[7],
+        'mpptmaxPowerToday': val[8],
+        'mpptyieldYesterday': val[9],
+        'mpptmaxPowerYesterday': val[10],
+        'mppterrorcode': val[11],  # int
+        'mpptstate': val[12],  # int
 
         'p_V': val[13],
         'p_AC_OUT_V': val[14],
