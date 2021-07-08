@@ -32,6 +32,8 @@ def parse_energiaburk(hex_str, port=None):
         return parse_voltageburk(hex_str)
     elif hex_str.startswith('0a00'):
         return parse_victron(hex_str)
+    elif hex_str.startswith('0a02'):
+        return parse_victronphoenix(hex_str)
     elif hex_str.startswith('0700'):
         return parse_davisweather(hex_str)
     elif hex_str.startswith('d77e'):
@@ -91,6 +93,70 @@ def parse_victron(hex_str, port=None):
         'batterycurrent': val[5],
         'errorcode': val[11],  # int
         'state': val[12],  # int
+    }
+    return data
+
+
+def parse_victronphoenix(hex_str, port=None):
+    """
+    Parse payload like "0a0200000000000000000000000000000000000000004765d8590000fa0000090000" struct of mixed values
+    :param hex_str: Victron hex payload
+    :param port: LoRaWAN port
+    :return: dict containing values
+    :c uint8 = B
+    :c uint16 = H x = filling
+    """
+
+    b = bytes.fromhex(hex_str)
+    val = struct.unpack('<BbHHHhHHHHHBBHHHBBBBBx', b)
+
+    data = {
+        # 0  msgtype
+        # 1  msg_ver
+
+        #MPPT
+        # 2  uint16 mainVoltage_V;      // mV
+        # 3  uint16 panelVoltage_VPV;   // mV ( value needs to be divided by 10 )
+        # 4  uint16 panelPower_PPV;     // W
+        # 5  int6 batteryCurrent_I;   // mA ( value needs to be divided by 10 )
+        # 6  uint16 yieldTotal_H19;     // 0.01 kWh
+        # 7  uint16 yieldToday_H20;     // 0.01 kWh
+        # 8  uint16 maxPowerToday_H21;  // W
+        # 9  uint16 yieldYesterday_H22; // 0.01 kWh
+        # 10  uint16 maxPowerYesterday_H23; // W
+        # 11  uint8 errorCode_ERR;
+        # 12  uint8 stateOfOperation_CS;
+
+        #Phoenix
+        # 13 uint16_t p_V;      // mV
+        # 14 uint16_t p_AC_OUT_V;
+        # 15 uint16_t p_AC_OUT_S;
+        # 16 uint8_t p_AC_OUT_I;
+        # 17 uint8_t p_WARN; // Same as ar but for now can be multiple bits
+        # 18 uint8_t p_AR; // alarm convert to 8 bit
+        # 19 uint8_t p_CS; // convert to 8 bit
+        # 20 uint8_t p_MODE;
+
+        'mpptmainvoltage': val[2],
+        'mpptpanelvoltage': val[3]/10,
+        'mpptpanelpower': val[4],
+        'mpptbatterycurrent': val[5]/10,
+        'mpptyieldTotal': val[6],
+        'mpptyieldToday': val[7],
+        'mpptmaxPowerToday': val[8],
+        'mpptyieldYesterday': val[9],
+        'mpptmaxPowerYesterday': val[10],
+        'mppterrorcode': val[11],  # int
+        'mpptstate': val[12],  # int
+
+        'p_V': val[13],
+        'p_AC_OUT_V': val[14],
+        'p_AC_OUT_S': val[15],
+        'p_AC_OUT_I': val[16],
+        'p_WARN': val[17],
+        'p_AR': val[18],
+        'p_CS': val[19],
+        'p_MODE': val[20]
     }
     return data
 
