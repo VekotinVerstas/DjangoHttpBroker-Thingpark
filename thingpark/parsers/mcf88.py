@@ -60,3 +60,25 @@ def parse_mcf88(hex_str, port=None):
             datalines.append(dataline)
         return datalines
     return None
+
+
+
+
+def decode_hex(hex_str: str, port: int = None):
+    return parse_mcf88(hex_str, port=port)
+
+
+if __name__ == '__main__':
+    import sys
+
+    try:
+        print(decode_hex(sys.argv[1], int(sys.argv[2])))
+    except IndexError as err:
+        print('Some examples:')
+        for s in [('04d276522a44fcb3649001147b522a3cfcb6579001d77e522a22fcb72e900152', 2),
+                  ('04bd79522a2ffcc8869001827d522a06fcc8549001c481522a12fcc84190015b', 2),
+                  ('042279522a68fca5489101e57c522a72fca62191012781522a6efca60691015c', 2),
+                  ]:
+            print(decode_hex(s[0], s[1]))
+
+        print(f'\nUsage: {sys.argv[0]} hex_payload port\n\n')
