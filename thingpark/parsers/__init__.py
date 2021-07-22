@@ -5,6 +5,7 @@ from .paxcounter import parse_paxcounter
 from .energiaburk import parse_energiaburk
 from .sensornode import parse_sensornode
 from .decentlab import parse_decentlab
+from .decentlab_pm import parse_decentlab_pm
 
 
 def parse(payload_hex):
